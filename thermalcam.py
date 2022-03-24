@@ -248,7 +248,7 @@ class ViewPage(Frame):
             self.controller.thermalrunner.usequeue = True    
 
     def keycalltherm(self): #switch to plain thermal
-        print("keycalltherm")
+        print("switching to thermal-only")
         if (self.controller.thermalrunner.VIDEOON == False) and (self.controller.thermalrunner.THERMALON == True):
             print("thermal vision - cm up") #cm down will be set up as another button later, for now just cycle through colourmaps using cm_up
             self.controller.thermalrunner.cm_up()
@@ -264,7 +264,7 @@ class ViewPage(Frame):
         self.videocanvas.itemconfigure(self.canfps, state='hidden')
  
     def keycallhyb(self): #switch to hybrid mode where thermal is overlaid over video
-        print("keycallthyb")
+        print("switching to hybrid mode")
         if (self.controller.thermalrunner.VIDEOON == True) and (self.controller.thermalrunner.THERMALON == True):
             print("thermal vision - cm up") #cm down will be set up as another button later, for now just cycle through colourmaps using cm_up
             self.controller.thermalrunner.cm_up()
@@ -279,8 +279,8 @@ class ViewPage(Frame):
         self.videocanvas.itemconfigure(self.canthermfps, state='normal')
         self.videocanvas.itemconfigure(self.canfps, state='normal')
 
-    def keycallback(self):
-        print("keycallback") #switch to plain video
+    def keycallback(self): #switch to plain video
+        print("switching to video-only") 
         self.controller.thermalrunner.THERMALON = False
         self.controller.thermalrunner.VIDEOON = True
         
