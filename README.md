@@ -24,6 +24,7 @@ X - exit
 ![image](https://user-images.githubusercontent.com/32528659/159824818-05c3bfaf-f209-4a35-a524-aad9a84466ef.png)
 
 Snapshot examples:
+
 ![frame-04-08-2019-18-42-53](https://user-images.githubusercontent.com/32528659/159825746-f59620cd-198c-4667-b544-7520807ca22f.jpg)
 
 ![frame-08-08-2019-02-04-10](https://user-images.githubusercontent.com/32528659/159825748-9929d748-093a-4bc8-8e2d-49e254147dbe.jpg)
