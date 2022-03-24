@@ -8,6 +8,7 @@ Camera and i2c need to be enabled. Set i2c as fast as possible in config.txt: dt
 Requires opencv, numpy, matplotlib, imutils and bsdz mlx90640-library - https://github.com/bsdz/mlx90640-library
 
 controls:
+
 NV - plain video, add an IR illuminator to have "night vision".
 
 TV - plain thermal mode. press button again to cycle through colourmaps.
