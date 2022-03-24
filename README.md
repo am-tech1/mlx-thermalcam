@@ -27,6 +27,6 @@ Snapshot examples:
 
 ![frame-04-08-2019-18-42-53](https://user-images.githubusercontent.com/32528659/159825746-f59620cd-198c-4667-b544-7520807ca22f.jpg)
 
-![frame-23-07-2019-21-06-29](https://user-images.githubusercontent.com/32528659/159825857-c73778e4-cf05-4f2e-a2db-40d1bf106270.jpg)
+![frame-16-08-2019-17-57-30](https://user-images.githubusercontent.com/32528659/159826348-a0c0f873-ce72-43cf-98a8-f1fd10524cda.jpg)
 
 ![frame-23-03-2022-21-09-12](https://user-images.githubusercontent.com/32528659/159826305-b73ac906-20fd-4271-9651-b042849c29fc.jpg)
