@@ -154,7 +154,6 @@ class SensorApp(tkinter.Tk):
         self.show_frame(ViewPage) #start thermal viewer page
 
     def show_frame(self,cont):
-        #print(cont)
         frame = self.pages[cont]
         frame.tkraise()
 
