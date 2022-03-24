@@ -9,10 +9,15 @@ Requires opencv, numpy, matplotlib, imutils and bsdz mlx90640-library - https://
 
 controls:
 NV - plain video, add an IR illuminator to have "night vision".
+
 TV - plain thermal mode. press button again to cycle through colourmaps.
+
 HV - hybrid vision mode, thermal overlaid over video. press button again to cycle through colourmaps.
+
 ! - take a snapshot
+
 LK - lock thermal frame to video frame. this slows down video FPS to the same rate as thermal, but prevents the thermal from lagging behind video.
+
 X - exit 
 
 ![image](https://user-images.githubusercontent.com/32528659/159824818-05c3bfaf-f209-4a35-a524-aad9a84466ef.png)
