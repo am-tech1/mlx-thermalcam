@@ -45,8 +45,40 @@ FULLRESOLUTION = [720,480] #output display resolution
 
 centrexy=[int(FULLRESOLUTION[0]/2),int(FULLRESOLUTION[1]/2)]
 
-class ThermalApp():
+class SensorApp(tkinter.Tk): #main gui app
     def __init__(self):
+        tkinter.Tk.__init__(self)
+        self.attributes('-fullscreen', True)
+        self.geometry('%dx%d+%d+%d' % (FULLRESOLUTION[0],FULLRESOLUTION[1],0,0))
+        self.lastimg = None #holds last image for snapshot
+        self.lastframe = None #last combined frame
+
+        #starting thermal, needs to sleep for a sec to catch up
+        self.thermalrunner = ThermalApp()
+        sleep(1)
+        #thermal started
+
+        container = Frame(self)
+        container.pack(side="top", fill="both", expand=True)
+
+        self.pages = {} #will expand this to add a gallery page to see snapshots
+        frame = ViewPage(container, self)
+        self.pages[ViewPage] = frame
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame(ViewPage) #start thermal viewer page
+
+    def show_frame(self,cont):
+        frame = self.pages[cont]
+        frame.tkraise()
+
+
+    def killapp(self):
+        print("going down")
+        self.destroy()
+
+class ThermalApp(): #thermal thread
+    def __init__(self): #init for thermal thread
         self.THERMALON = True
         self.VIDEOON = True
         self.tempmid = ""
@@ -78,9 +110,9 @@ class ThermalApp():
             self.currentcm == (len(self.colormaps)-1)
         self.cmap = cm.get_cmap(self.colormaps[self.currentcm])
 
-    def td_to_image(self, f, cmap):
+    def td_to_image(self, f, cmap): #generate heatmap from values using colourmap
         self.f = f
-        norm = mpl.colors.Normalize(vmin=self.f.min(),vmax=self.f.max()) ## original implementation
+        norm = mpl.colors.Normalize(vmin=self.f.min(),vmax=self.f.max())
         self.tempmin = self.f.min()
         self.tempmax = self.f.max()
         heattemp = np.uint8(self.cmap(norm(self.f))*255)        
@@ -89,9 +121,9 @@ class ThermalApp():
       
         return heattemp
 
-    def thermalworker(self):
+    def thermalworker(self): #main thermal thread 
         # mlx90640 settings
-        self.MLX_I2C_ADDR = 0x33
+        self.MLX_I2C_ADDR = 0x33 #default i2c address, can change this if using a different i2c bus address
         self.hertz_default = 8
         API.SetRefreshRate(self.MLX_I2C_ADDR, hertz_to_refresh_rate[self.hertz_default])
         API.SetChessMode(self.MLX_I2C_ADDR)
@@ -109,7 +141,7 @@ class ThermalApp():
         self.image_buffer = ffi.new("float[768]")
         print ("Starting thermal worker")
         while True:
-            t1 = time.perf_counter()
+            t1 = time.perf_counter() #capture t1 for fps counter
             API.GetFrameData(self.MLX_I2C_ADDR, self.frame_buffer);
             # get reflected temperature based on the sensor
             # ambient temperature
@@ -118,49 +150,17 @@ class ThermalApp():
             # frame are stored in the mlx90640To array
             API.CalculateTo(self.frame_buffer, self.params, self.emissivity, tr, self.image_buffer);
 
-            ta_np = temperature_data_to_ndarray(self.image_buffer)
-            self.tempmid = ta_np[12,16]
+            ta_np = temperature_data_to_ndarray(self.image_buffer) 
+            self.tempmid = ta_np[12,16] #capture temperature from the middle of the screen into a variable
             self.heatmap = self.td_to_image(ta_np, self.cmap)
             if self.usequeue:
                 while not self.tframe.empty():
                     self.tframe.get()
                 self.tframe.put(self.heatmap)            
-            t2 = time.perf_counter()
+                
+            t2 = time.perf_counter() #capture t2 for fps counter
             time1 = (t2-t1)
-         
-            self.fps = " {:.1f} FPS".format(1/time1)
-
-class SensorApp(tkinter.Tk):
-    def __init__(self):
-        tkinter.Tk.__init__(self)
-        self.attributes('-fullscreen', True)
-        self.geometry('%dx%d+%d+%d' % (FULLRESOLUTION[0],FULLRESOLUTION[1],0,0))
-        self.lastimg = None
-        self.lastframe = None #last combined frame
-
-        #starting thermal, needs to sleep for a sec to catch up
-        self.thermalrunner = ThermalApp()
-        sleep(1)
-        #thermal started
-
-        container = Frame(self)
-        container.pack(side="top", fill="both", expand=True)
-
-        self.pages = {} #will expand this to add a gallery page to see snapshots
-        frame = ViewPage(container, self)
-        self.pages[ViewPage] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
-
-        self.show_frame(ViewPage) #start thermal viewer page
-
-    def show_frame(self,cont):
-        frame = self.pages[cont]
-        frame.tkraise()
-
-
-    def killapp(self):
-        print("going down")
-        self.destroy()
+            self.fps = " {:.1f} FPS".format(1/time1) #output fps counter
 
 class ViewPage(Frame):
     def __init__(self, parent, controller): 
@@ -168,18 +168,21 @@ class ViewPage(Frame):
         self.fps = ""
 
         self.controller = controller
-        self.videocanvas = Canvas(self, width = FULLRESOLUTION[0], height = FULLRESOLUTION[1], bg= "white")
+        
+        self.videocanvas = Canvas(self, width = FULLRESOLUTION[0], height = FULLRESOLUTION[1], bg= "white") #set up canvas
         self.videocanvas.pack(side="top", fill="both", expand=True)
 
         self.vidimg = self.videocanvas.create_image(0, 0, anchor = tkinter.NW) #image on canvas obj for displaying video
-        self.cantemp = self.videocanvas.create_text((centrexy[0]+10),centrexy[1], text="{0:.1f}".format(self.controller.thermalrunner.tempmid), fill='white', font=("System", 14), anchor = tkinter.NW)
-        self.cantempmax = self.videocanvas.create_text(((FULLRESOLUTION[0]/2)-65),(FULLRESOLUTION[1]-50), text="Max Temp: {0:.1f}".format(self.controller.thermalrunner.tempmax), fill='white', font=("System", 14), anchor = tkinter.NW)
-        self.cantempmin = self.videocanvas.create_text(((FULLRESOLUTION[0]/2)-65),(FULLRESOLUTION[1]-25), text="Min Temp: {0:.1f}".format(self.controller.thermalrunner.tempmin), fill='white', font=("System", 14), anchor = tkinter.NW)
-        self.canthermfps = self.videocanvas.create_text((FULLRESOLUTION[0]-100),25, text=self.controller.thermalrunner.fps, font=("System", 14), fill='red', anchor = tkinter.NW)                
-        self.canfps = self.videocanvas.create_text((FULLRESOLUTION[0]-100),5, text=self.fps, font=('System', 14), fill='white', anchor = tkinter.NW)                
-        self.centre = self.videocanvas.create_oval((centrexy[0]-3),(centrexy[1]-3),(centrexy[0]+3),(centrexy[1]+3), fill='red')
+        self.cantemp = self.videocanvas.create_text((centrexy[0]+10),centrexy[1], text="{0:.1f}".format(self.controller.thermalrunner.tempmid), fill='white', font=("System", 14), anchor = tkinter.NW) #temperature at crosshair
+        self.cantempmax = self.videocanvas.create_text(((FULLRESOLUTION[0]/2)-65),(FULLRESOLUTION[1]-50), text="Max Temp: {0:.1f}".format(self.controller.thermalrunner.tempmax), fill='white', font=("System", 14), anchor = tkinter.NW) #max temperature
+        self.cantempmin = self.videocanvas.create_text(((FULLRESOLUTION[0]/2)-65),(FULLRESOLUTION[1]-25), text="Min Temp: {0:.1f}".format(self.controller.thermalrunner.tempmin), fill='white', font=("System", 14), anchor = tkinter.NW) #min temperature
+        self.canthermfps = self.videocanvas.create_text((FULLRESOLUTION[0]-100),25, text=self.controller.thermalrunner.fps, font=("System", 14), fill='red', anchor = tkinter.NW) #fps counter for thermal
+        self.canfps = self.videocanvas.create_text((FULLRESOLUTION[0]-100),5, text=self.fps, font=('System', 14), fill='white', anchor = tkinter.NW) #fps counter for video
+        self.centre = self.videocanvas.create_oval((centrexy[0]-3),(centrexy[1]-3),(centrexy[0]+3),(centrexy[1]+3), fill='red') #crosshair in centre of screen
 
         self.video_frame()
+        
+        #gui buttons
         self.closeBtn = Button(self, text="X", width=2, height=2, command=self.controller.killapp).place(x=5, y=(FULLRESOLUTION[1]-55))
         self.camBtn = Button(self, text="NV", width=2, height=2, command=self.keycallback).place(x=5, y=5)
         self.thermBtn = Button(self, text="TV", width=2, height=2, command=self.keycalltherm).place(x=5, y=60)
@@ -187,17 +190,16 @@ class ViewPage(Frame):
         self.lockBtn = Button(self, text="Lk", width=2, height=2, command=self.lockframe).place(x=5, y=(FULLRESOLUTION[1]-105))
         self.snapBtn = Button(self, text="!", width=2, height=2, command=self.snapshot).place(x=(FULLRESOLUTION[0]-50), y=(FULLRESOLUTION[1]-55))
 
-
-    def video_frame(self):
+    def video_frame(self): #process video and thermal
         t1 = time.perf_counter()
 
-        if self.controller.thermalrunner.THERMALON:
-            if self.controller.thermalrunner.VIDEOON:
-                frame = vs.read()
-                if self.controller.thermalrunner.usequeue:
+        if self.controller.thermalrunner.THERMALON: #if capturing from the thermal sensor
+            if self.controller.thermalrunner.VIDEOON: #if capturing from the video camera
+                frame = vs.read() #get frame from video stream
+                if self.controller.thermalrunner.usequeue: 
                     heatframe = self.controller.thermalrunner.tframe.get() #locks video frame to thermal, lower fps but no lag between thermal and video
                 else:
-                    heatframe = self.controller.thermalrunner.heatmap
+                    heatframe = self.controller.thermalrunner.heatmap #grabs the heatmap
                 heatframe = cv2.resize(heatframe,(int(RESOLUTION[0]),int(RESOLUTION[1])))
                 frame = cv2.addWeighted(frame,0.4,heatframe,0.5,0)
             else:
@@ -208,7 +210,7 @@ class ViewPage(Frame):
             frame = vs.read()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        self.controller.lastimg = frame
+        self.controller.lastimg = frame #for snapshot
         img = Image.fromarray(frame)
         img = img.resize((FULLRESOLUTION[0],FULLRESOLUTION[1]))
 
@@ -234,7 +236,7 @@ class ViewPage(Frame):
 
         self.videocanvas.after(10, self.video_frame)
 
-    def snapshot(self):
+    def snapshot(self): #write snapshot to file
         frame = cv2.resize(self.controller.lastimg,(int(FULLRESOLUTION[0]),int(FULLRESOLUTION[1])))
         cv2.imwrite("frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
@@ -253,6 +255,8 @@ class ViewPage(Frame):
 
         self.controller.thermalrunner.VIDEOON = False
         self.controller.thermalrunner.THERMALON = True
+        
+        #adjust gui elements
         self.videocanvas.itemconfigure(self.cantempmax, state='normal')
         self.videocanvas.itemconfigure(self.cantempmin, state='normal')
         self.videocanvas.itemconfigure(self.cantemp, state='normal')
@@ -267,6 +271,8 @@ class ViewPage(Frame):
 
         self.controller.thermalrunner.VIDEOON = True
         self.controller.thermalrunner.THERMALON = True
+        
+        #adjust gui elements
         self.videocanvas.itemconfigure(self.cantempmax, state='normal')
         self.videocanvas.itemconfigure(self.cantempmin, state='normal')
         self.videocanvas.itemconfigure(self.cantemp, state='normal')
@@ -275,14 +281,16 @@ class ViewPage(Frame):
 
     def keycallback(self):
         print("keycallback") #switch to plain video
+        self.controller.thermalrunner.THERMALON = False
+        self.controller.thermalrunner.VIDEOON = True
+        
+        #adjust gui elements
         self.videocanvas.itemconfigure(self.cantempmax, state='hidden')
         self.videocanvas.itemconfigure(self.cantempmin, state='hidden')
         self.videocanvas.itemconfigure(self.cantemp, state='hidden')
         self.videocanvas.itemconfigure(self.canthermfps, state='hidden')
         self.videocanvas.itemconfigure(self.canfps, state='normal')
-        self.controller.thermalrunner.THERMALON = False
-        self.controller.thermalrunner.VIDEOON = True
-
+        
 vs = VideoStream(usePiCamera=True, resolution=(RESOLUTION[0], RESOLUTION[1])).start()
 
 def main():
